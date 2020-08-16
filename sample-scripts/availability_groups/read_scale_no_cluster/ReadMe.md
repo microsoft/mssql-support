@@ -1,0 +1,1 @@
+This set of files allow you to create a read scale availability group without any cluster manager involved. The documentation for this feature is available at https://docs.microsoft.com/en-us/sql/database-engine/availability-groups/windows/configure-read-scale-availability-groups
