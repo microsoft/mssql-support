@@ -32,9 +32,8 @@ AS
             INSERT INTO @DBs (DBNAME) 
             SELECT Name FROM master.sys.databases 
             where state=0 
-            AND name=@DatabaseName 
-            OR @DatabaseName IS NULL 
-            ORDER BY Name 
+            AND name= ISNULL(@DatabaseName ,name)
+            ORDER BY Name
             -- Filter out databases which do not need to backed up 
             IF @backupType='F' 
                   BEGIN 
