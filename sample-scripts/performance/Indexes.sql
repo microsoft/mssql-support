@@ -1,6 +1,6 @@
 -- =============================================  
 -- Author: Sait ORHAN  
--- Create date: 2010-02-06 
+-- Create date: 2020-12-10
 -- Description: Getting indexes, avg fragmentations, gives advice for index, creates reorganize and rebuild queries, table space in MB 
 -- LinkedIn: https://www.linkedin.com/in/saitorhan/  
 -- Twitter: https://twitter.com/saitorhan
