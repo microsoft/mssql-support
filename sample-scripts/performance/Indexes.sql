@@ -1,15 +1,24 @@
+declare @id int
+declare @tableName nvarchar(255)
+declare @schemaName nvarchar(255)
+declare @rowCount int
+declare @sql nvarchar(1000)
+declare @param nvarchar(255)
+
 if OBJECT_ID('tempdb..#Indexes') is not null
 begin
 drop table #Indexes
 end
 
 create table #Indexes(
+Id int primary key identity,
 SchemaName nvarchar(255),
 TableName nvarchar(255),
 IndexName nvarchar(255),
 IndexType nvarchar(255),
 Avg_fragmentation float,
 ActionNeed nvarchar(255),
+[RowCount] int,
 ReorganizeIndex nvarchar(1000),
 ReorganizeTable nvarchar(1000),
 RebuildIndex nvarchar(1000),
@@ -54,6 +63,23 @@ join sys.indexes i on t.object_id = i.object_id
 join sys.dm_db_index_physical_stats(DB_ID(), null, null, null, null) as frag on frag.object_id = t.object_id and frag.index_id = i.index_id
 where t.type = 'U' and frag.alloc_unit_type_desc = 'IN_ROW_DATA'
 order by frag.avg_fragmentation_in_percent desc 
+
+declare saitorhan_cls cursor for select Id, SchemaName, TableName from #Indexes
+open saitorhan_cls
+fetch next from saitorhan_cls into @id, @schemaName, @tableName
+
+while @@FETCH_STATUS = 0
+begin
+select @sql = CONCAT('SELECT @rowCountIn = COUNT(*) FROM [', @schemaName, '].[', @tableName, ']')
+set @param = '@rowCountIn int OUTPUT'
+exec sp_executesql @sql, @param, @rowCountIn = @rowCount OUTPUT 
+update #Indexes set [RowCount] = @rowCount where Id = @id
+
+fetch next from saitorhan_cls into @id, @schemaName, @tableName
+end
+close saitorhan_cls
+deallocate saitorhan_cls
+
 
 select * from #Indexes
 
