@@ -1,9 +1,8 @@
-declare @id int
-declare @tableName nvarchar(255)
-declare @schemaName nvarchar(255)
+declare @indexName nvarchar(255)
 declare @rowCount int
-declare @sql nvarchar(1000)
-declare @param nvarchar(255)
+declare @UsedMB numeric(36, 2)
+declare @UnusedMB numeric(36, 2)
+declare @TotalMB numeric(36, 2)
 
 if OBJECT_ID('tempdb..#Indexes') is not null
 begin
@@ -19,9 +18,10 @@ IndexType nvarchar(255),
 Avg_fragmentation float,
 ActionNeed nvarchar(255),
 [RowCount] int,
-UsedMB numeric(36, 2),
-UnusedMB numeric(36, 2),
-TotalMB numeric(36, 2),
+IndexMB numeric(36,3),
+TableUsedMB numeric(36, 3),
+TableUnusedMB numeric(36, 3),
+TableTotalMB numeric(36, 3),
 ReorganizeIndex nvarchar(1000),
 ReorganizeTable nvarchar(1000),
 RebuildIndex nvarchar(1000),
@@ -36,6 +36,7 @@ IndexName,
 IndexType,
 Avg_fragmentation ,
 ActionNeed,
+IndexMB,
 ReorganizeIndex,
 ReorganizeTable,
 RebuildIndex ,
@@ -48,12 +49,12 @@ t.name TableName,
 i.name IndexName,
 frag.index_type_desc IndexType,
 frag.avg_fragmentation_in_percent,
---frag.alloc_unit_type_desc,
 
 (case
 	when frag.avg_fragmentation_in_percent < 5 then 'Nothing'
 	when frag.avg_fragmentation_in_percent between 5 and 30 then 'Reorganize'
 	when frag.avg_fragmentation_in_percent > 30 then 'Rebuild' end),
+cast((frag.page_count * 8.0 / 1024 / 1024) as numeric(36,3)), 
 
 CONCAT('ALTER INDEX [',i.name ,'] ON [', s.name, '].[' , t.name , '] REORGANIZE;') [ReorganizeIndex],
 CONCAT('ALTER INDEX ALL ON [', s.name, '].[' , t.name ,'] REORGANIZE;') [ReorganizeAllTable],
@@ -64,23 +65,33 @@ from sys.tables t
 join sys.schemas s on t.schema_id = s.schema_id
 join sys.indexes i on t.object_id = i.object_id
 join sys.dm_db_index_physical_stats(DB_ID(), null, null, null, null) as frag on frag.object_id = t.object_id and frag.index_id = i.index_id
-join sys.partitions p on i.object_id = p.object_id and i.index_id = p.index_id
-join sys.allocation_units a on p.partition_id = a.container_id
 where t.type = 'U' and frag.alloc_unit_type_desc = 'IN_ROW_DATA'
 order by frag.avg_fragmentation_in_percent desc 
 
-declare saitorhan_cls cursor for select Id, SchemaName, TableName from #Indexes
+declare saitorhan_cls cursor for
+
+SELECT
+i.name IndexName,
+p.rows AS RowCounts,
+CAST(ROUND((SUM(a.used_pages) / 128.00), 2) AS NUMERIC(36, 3)), -- AS Used_MB,
+CAST(ROUND((SUM(a.total_pages) - SUM(a.used_pages)) / 128.00, 3) AS NUMERIC(36, 2)),-- AS Unused_MB,
+CAST(ROUND((SUM(a.total_pages) / 128.00), 2) AS NUMERIC(36, 3)) --AS Total_MB
+FROM sys.tables t
+INNER JOIN sys.indexes i ON t.object_id = i.object_id
+INNER JOIN sys.partitions p ON i.object_id = p.object_id AND i.index_id = p.index_id
+INNER JOIN sys.allocation_units a ON p.partition_id = a.container_id
+INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+GROUP BY i.name, p.Rows
+
 open saitorhan_cls
-fetch next from saitorhan_cls into @id, @schemaName, @tableName
+fetch next from saitorhan_cls into @indexName, @rowCount, @UsedMB, @UnusedMB, @TotalMB
 
 while @@FETCH_STATUS = 0
 begin
-select @sql = CONCAT('SELECT @rowCountIn = COUNT(*) FROM [', @schemaName, '].[', @tableName, ']')
-set @param = '@rowCountIn int OUTPUT'
-exec sp_executesql @sql, @param, @rowCountIn = @rowCount OUTPUT 
-update #Indexes set [RowCount] = @rowCount where Id = @id
 
-fetch next from saitorhan_cls into @id, @schemaName, @tableName
+update #Indexes set [RowCount] = @rowCount, TableUsedMB = @UsedMB, TableUnusedMB = @UnusedMB, TableTotalMB = @TotalMB where IndexName = @indexName
+
+fetch next from saitorhan_cls into @indexName, @rowCount, @UsedMB, @UnusedMB, @TotalMB
 end
 close saitorhan_cls
 deallocate saitorhan_cls
