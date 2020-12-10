@@ -30,6 +30,7 @@ IndexName nvarchar(255),
 IndexType nvarchar(255),
 Avg_fragmentation float,
 ActionNeed nvarchar(255),
+StatsUpdated datetime,
 [RowCount] int,
 TableUsedMB numeric(36, 3),
 TableUnusedMB numeric(36, 3),
@@ -38,6 +39,7 @@ ReorganizeIndex nvarchar(1000),
 ReorganizeTable nvarchar(1000),
 RebuildIndex nvarchar(1000),
 RebuildTable nvarchar(1000),
+UpdateStats nvarchar(1000),
 )
 
 -- getting infos
@@ -48,10 +50,12 @@ IndexName,
 IndexType,
 Avg_fragmentation ,
 ActionNeed,
+StatsUpdated,
 ReorganizeIndex,
 ReorganizeTable,
 RebuildIndex ,
-RebuildTable
+RebuildTable,
+UpdateStats
 )
 
 select 
@@ -66,12 +70,12 @@ frag.avg_fragmentation_in_percent, -- fragmentation in percent
 	when frag.avg_fragmentation_in_percent < 5 then 'Nothing'
 	when frag.avg_fragmentation_in_percent between 5 and 30 then 'Reorganize'
 	when frag.avg_fragmentation_in_percent > 30 then 'Rebuild' end), -- advice for action
-
+	STATS_DATE(t.object_id, i.index_id),
 CONCAT('ALTER INDEX [',i.name ,'] ON [', s.name, '].[' , t.name , '] REORGANIZE;') [ReorganizeIndex], -- index reorganize query
 CONCAT('ALTER INDEX ALL ON [', s.name, '].[' , t.name ,'] REORGANIZE;') [ReorganizeAllTable], -- reorganize all index on table
 CONCAT('ALTER INDEX [', i.name, '] ON [', s.name, '].[' , t.name, '] REBUILD ;') [RebuildIndex], -- index rebuid query
-CONCAT('ALTER INDEX ALL ON [', s.name, '].[' ,  t.name ,'] REBUILD WITH (FILLFACTOR = 80, SORT_IN_TEMPDB = ON, STATISTICS_NORECOMPUTE = ON, ONLINE = ON);') [RebuildTable] -- rebuild all index on table
-
+CONCAT('ALTER INDEX ALL ON [', s.name, '].[' ,  t.name ,'] REBUILD WITH (FILLFACTOR = 80, SORT_IN_TEMPDB = ON, STATISTICS_NORECOMPUTE = ON, ONLINE = ON);') [RebuildTable], -- rebuild all index on table
+CONCAT('UPDATE STATISTICS [' , s.name , '].[' , t.name, ']')
 from sys.tables t 
 join sys.schemas s on t.schema_id = s.schema_id
 join sys.indexes i on t.object_id = i.object_id
