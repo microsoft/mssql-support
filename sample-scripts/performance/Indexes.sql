@@ -1,3 +1,13 @@
+-- =============================================  
+-- Author: Sait ORHAN  
+-- Create date: 2010-02-06 
+-- Description: Getting indexes, avg fragmentations, gives advice for index, creates reorganize and rebuild queries, table space in MB 
+-- LinkedIn: https://www.linkedin.com/in/saitorhan/  
+-- Twitter: https://twitter.com/saitorhan
+-- GitHub: https://github.com/saitorhan
+-- YouTube: https://www.youtube.com/saitorhan
+-- ============================================= 
+
 declare @indexName nvarchar(255)
 declare @schemaName nvarchar(255)
 declare @tableName nvarchar(255)
