@@ -19,9 +19,9 @@ IndexType nvarchar(255),
 Avg_fragmentation float,
 ActionNeed nvarchar(255),
 [RowCount] int,
-UsedMB float,
-UnusedMB float,
-TotalMB float,
+UsedMB numeric(36, 2),
+UnusedMB numeric(36, 2),
+TotalMB numeric(36, 2),
 ReorganizeIndex nvarchar(1000),
 ReorganizeTable nvarchar(1000),
 RebuildIndex nvarchar(1000),
@@ -64,6 +64,8 @@ from sys.tables t
 join sys.schemas s on t.schema_id = s.schema_id
 join sys.indexes i on t.object_id = i.object_id
 join sys.dm_db_index_physical_stats(DB_ID(), null, null, null, null) as frag on frag.object_id = t.object_id and frag.index_id = i.index_id
+join sys.partitions p on i.object_id = p.object_id and i.index_id = p.index_id
+join sys.allocation_units a on p.partition_id = a.container_id
 where t.type = 'U' and frag.alloc_unit_type_desc = 'IN_ROW_DATA'
 order by frag.avg_fragmentation_in_percent desc 
 
