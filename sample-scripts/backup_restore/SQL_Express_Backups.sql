@@ -1,4 +1,4 @@
--- Copyright © Microsoft Corporation.  All Rights Reserved. 
+-- Copyright ? Microsoft Corporation.  All Rights Reserved. 
 -- This code released under the terms of the 
 -- Microsoft Public License (MS-PL, http://opensource.org/licenses/ms-pl.html.) 
 USE [master]  
@@ -32,7 +32,7 @@ AS
             INSERT INTO @DBs (DBNAME) 
             SELECT Name FROM master.sys.databases 
             where state=0 
-            AND name= ISNULL(@DatabaseName ,name)
+            AND name= ISNULL(@databaseName ,name)
             ORDER BY Name
             -- Filter out databases which do not need to backed up 
             IF @backupType='F' 
@@ -52,9 +52,9 @@ AS
                   RETURN 
                   END 
             -- Declare variables 
-            DECLARE @BackupName varchar(100) 
-            DECLARE @BackupFile varchar(100) 
-            DECLARE @DBNAME varchar(300) 
+            DECLARE @BackupName nvarchar(100) 
+            DECLARE @BackupFile nvarchar(300) 
+            DECLARE @DBNAME nvarchar(300) 
             DECLARE @sqlCommand NVARCHAR(1000)  
 	        DECLARE @dateTime NVARCHAR(20) 
             DECLARE @Loop int                   
