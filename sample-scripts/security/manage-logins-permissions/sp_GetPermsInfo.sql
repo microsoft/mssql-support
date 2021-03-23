@@ -173,6 +173,7 @@ AS BEGIN
        --From here down it's just printing the results.
        IF (EXISTS(SELECT 1 FROM #ServerPerms WHERE [State] = 'DENY')
               OR EXISTS(SELECT 1 FROM #DBPerms WHERE [State] = 'DENY'))
+			AND (@GrantOrDeny <> 1 OR @GrantOrDeny IS NULL)
        BEGIN
               SELECT DISTINCT '**** SERVER PERMISSION: ' + [Permission] COLLATE SQL_Latin1_General_CP1_CI_AS  + ' HAS BEEN DENIED****'
               FROM #ServerPerms
@@ -185,6 +186,7 @@ AS BEGIN
        END
 
        IF EXISTS (SELECT 1 FROM #DBRoleMembership WHERE [DBRole] LIKE '%DENY%')
+		AND (@GrantOrDeny <> 1 OR @GrantOrDeny IS NULL)
        BEGIN
               SELECT '**** IS MEMBER OF ' + [DBRole] + ' IN DATABASE ' + [Database] + '****'
               FROM #DBRoleMembership 
@@ -207,7 +209,12 @@ AS BEGIN
               SELECT '' [Explicit Server Permissions:]
               SELECT *
               FROM #ServerPerms 
-			  WHERE [State] LIKE CASE WHEN @GrantOrDeny = 1 THEN 'DENY' ELSE '%' END
+			  WHERE [State] LIKE 
+				CASE 
+					WHEN @GrantOrDeny = 0 THEN 'DENY' 
+					WHEN @GrantOrDeny = 1 THEN 'GRANT'
+					ELSE '%' 
+				END
               ORDER BY [State], [Class], [Permission]
        END
        ELSE BEGIN
@@ -230,7 +237,12 @@ AS BEGIN
               SELECT '' [Explicit Database Permissions:]
               SELECT DISTINCT *
               FROM #DBPerms
-			  WHERE [State] LIKE CASE WHEN @GrantOrDeny = 1 THEN 'DENY' ELSE '%' END
+			  WHERE [State] LIKE 
+			  	CASE 
+					WHEN @GrantOrDeny = 0 THEN 'DENY' 
+					WHEN @GrantOrDeny = 1 THEN 'GRANT'
+					ELSE '%' 
+				END
               ORDER BY [Database], [State], [Class], [Permission]
        END
        ELSE BEGIN
